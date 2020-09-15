@@ -122,12 +122,76 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps;
 	HDC hdc;
 	RECT r;
+	int btnDown = FALSE;
+	short delta, fwkey;
 
 	switch (message)
 	{
 	case WM_CREATE:
-		SetTimer(hWnd, TIMER_ID, 10, NULL);
+		SetTimer(hWnd, TIMER_ID, 5, NULL);
 		break;
+
+	case WM_KEYDOWN:
+		switch (wParam) {
+		case VK_LEFT:
+			xCenter -= 5;
+			break;
+
+		case VK_RIGHT:
+			xCenter += 5;
+			break;
+
+		case VK_UP:
+			yCenter -= 5;
+			break;
+
+		case VK_DOWN:
+			yCenter += 5;
+			break;
+		}
+
+		InvalidateRect(hWnd, NULL, TRUE);
+		break;
+
+	case WM_LBUTTONDOWN:
+		btnDown = TRUE;
+		break;
+
+	case WM_MOUSEMOVE:
+		if (btnDown == TRUE) {
+			POINT mousePos;
+			GetCursorPos(&mousePos);
+
+			xCenter = mousePos.x;
+			yCenter = mousePos.y;
+
+			InvalidateRect(hWnd, NULL, TRUE);
+		}
+		break;
+
+	case WM_LBUTTONUP:
+		btnDown = FALSE;
+		break;
+
+	case WM_MOUSEWHEEL:
+		delta = GET_WHEEL_DELTA_WPARAM(wParam);
+		fwkey = GET_KEYSTATE_WPARAM(wParam);
+
+		if (delta > 0)
+			if (fwkey == MK_SHIFT)
+				xCenter -= 5;
+			else
+				yCenter -= 5;
+
+		else if (delta < 0)
+			if (fwkey == MK_SHIFT)
+				xCenter += 5;
+			else
+				yCenter += 5;
+
+		InvalidateRect(hWnd, NULL, TRUE);
+		break;
+
 	case WM_TIMER:
 		if (wParam == TIMER_ID) {
 			if (xCenter + RECT_WIDTH > WIDTH || xCenter - RECT_WIDTH < 0)
@@ -141,6 +205,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			InvalidateRect(hWnd, NULL, TRUE);
 		}
+		break;
+
 	case WM_PAINT:
 		// Here your application is laid out.
 		// For this introduction, we just print out "Hello, Windows desktop!"
@@ -161,10 +227,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		
 		break;
+
 	case WM_DESTROY:
 		KillTimer(hWnd, TIMER_ID);
 		PostQuitMessage(0);
 		break;
+
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 		break;
