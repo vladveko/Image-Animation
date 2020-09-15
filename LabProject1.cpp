@@ -3,8 +3,8 @@
 #include <string.h>
 #include <tchar.h>
 
-#define HEIGHT 800
-#define WIDTH 600
+#define WIDTH 800
+#define HEIGHT 600
 #define RECT_WIDTH 25
 #define TIMER_ID 1001
 
@@ -20,6 +20,11 @@ HINSTANCE hInst;
 
 // Forward declarations of functions included in this code module:
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+
+int xCenter = 50;
+int yCenter = 50;
+int xDelta = 1;
+int yDelta = 1;
 
 int CALLBACK WinMain(
 	_In_ HINSTANCE hInstance,
@@ -38,7 +43,7 @@ int CALLBACK WinMain(
 	wcex.hInstance = hInstance;
 	wcex.hIcon = LoadIcon(hInstance, IDI_APPLICATION);
 	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground = CreateSolidBrush(0x005500);
+	wcex.hbrBackground = CreateSolidBrush(0x000000);
 	wcex.lpszMenuName = NULL;
 	wcex.lpszClassName = szWindowClass;
 	wcex.hIconSm = LoadIcon(wcex.hInstance, IDI_APPLICATION);
@@ -71,7 +76,7 @@ int CALLBACK WinMain(
 		szTitle,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
-		HEIGHT, WIDTH,
+		WIDTH, HEIGHT,
 		NULL,
 		NULL,
 		hInstance,
@@ -117,28 +122,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps;
 	HDC hdc;
 	RECT r;
-	int xCenter = 50;
-	int yCenter = 50;
-	int xDelta = 1;
-	int yDelta = 1;
 
 	switch (message)
 	{
 	case WM_CREATE:
-		SetTimer(hWnd, TIMER_ID, 100, NULL);
+		SetTimer(hWnd, TIMER_ID, 10, NULL);
 		break;
 	case WM_TIMER:
 		if (wParam == TIMER_ID) {
 			if (xCenter + RECT_WIDTH > WIDTH || xCenter - RECT_WIDTH < 0)
 				xDelta = -xDelta;
 
-			if (yCenter + RECT_WIDTH > WIDTH || yCenter - RECT_WIDTH < 0)
+			if (yCenter + RECT_WIDTH > HEIGHT || yCenter - RECT_WIDTH < 0)
 				yDelta = -yDelta;
 
 			xCenter += xDelta;
 			yCenter += yDelta;
 
-			InvalidateRect(hWnd, NULL, FALSE);
+			InvalidateRect(hWnd, NULL, TRUE);
 		}
 	case WM_PAINT:
 		// Here your application is laid out.
@@ -161,7 +162,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		
 		break;
 	case WM_DESTROY:
-		KillTimer(hWnd, ID_TIMER);
+		KillTimer(hWnd, TIMER_ID);
 		PostQuitMessage(0);
 		break;
 	default:
