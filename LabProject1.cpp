@@ -3,6 +3,11 @@
 #include <string.h>
 #include <tchar.h>
 
+#define HEIGHT 800
+#define WIDTH 600
+#define RECT_WIDTH 25
+#define TIMER_ID 1001
+
 // Global variables
 
 // The main window class name.
@@ -66,7 +71,7 @@ int CALLBACK WinMain(
 		szTitle,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
-		800, 600,
+		HEIGHT, WIDTH,
 		NULL,
 		NULL,
 		hInstance,
@@ -111,24 +116,52 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	PAINTSTRUCT ps;
 	HDC hdc;
-	TCHAR greeting[] = _T("Hello, Windows desktop!");
+	RECT r;
+	int xCenter = 50;
+	int yCenter = 50;
+	int xDelta = 1;
+	int yDelta = 1;
 
 	switch (message)
 	{
-	case WM_PAINT:
-		hdc = BeginPaint(hWnd, &ps);
+	case WM_CREATE:
+		SetTimer(hWnd, TIMER_ID, 100, NULL);
+		break;
+	case WM_TIMER:
+		if (wParam == TIMER_ID) {
+			if (xCenter + RECT_WIDTH > WIDTH || xCenter - RECT_WIDTH < 0)
+				xDelta = -xDelta;
 
+			if (yCenter + RECT_WIDTH > WIDTH || yCenter - RECT_WIDTH < 0)
+				yDelta = -yDelta;
+
+			xCenter += xDelta;
+			yCenter += yDelta;
+
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+	case WM_PAINT:
 		// Here your application is laid out.
 		// For this introduction, we just print out "Hello, Windows desktop!"
 		// in the top left corner.
-		TextOut(hdc,
-			5, 5,
-			greeting, _tcslen(greeting));
-		// End application-specific layout section.
+		hdc = BeginPaint(hWnd, &ps); 
+
+		r.left = xCenter - RECT_WIDTH;
+		r.top = yCenter - RECT_WIDTH;
+		r.right = xCenter + RECT_WIDTH;
+		r.bottom = yCenter + RECT_WIDTH;
+
+		FillRect(hdc, &r, (HBRUSH)CreateSolidBrush(RGB(255, 0, 0)));
 
 		EndPaint(hWnd, &ps);
+		
+		
+		// End application-specific layout section.
+
+		
 		break;
 	case WM_DESTROY:
+		KillTimer(hWnd, ID_TIMER);
 		PostQuitMessage(0);
 		break;
 	default:
