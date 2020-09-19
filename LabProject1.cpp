@@ -1,4 +1,5 @@
 ﻿#include <windows.h>
+#include <windowsx.h>
 #include <stdlib.h>
 #include <string.h>
 #include <tchar.h>
@@ -23,8 +24,10 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 int xCenter = 50;
 int yCenter = 50;
-int xDelta = 1;
-int yDelta = 1;
+int xDelta = 4;
+int yDelta = 4;
+
+bool btnDown = FALSE;
 
 int CALLBACK WinMain(
 	_In_ HINSTANCE hInstance,
@@ -122,8 +125,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps;
 	HDC hdc;
 	RECT r;
-	int btnDown = FALSE;
 	short delta, fwkey;
+	int mouseX, mouseY;
 
 	switch (message)
 	{
@@ -154,16 +157,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_LBUTTONDOWN:
-		btnDown = TRUE;
+		mouseX = GET_X_LPARAM(lParam);
+		mouseY = GET_Y_LPARAM(lParam);
+		
+		if (mouseX >= xCenter - RECT_WIDTH && mouseX <= xCenter + RECT_WIDTH &&
+			mouseY >= yCenter - RECT_WIDTH && mouseY <= yCenter + RECT_WIDTH)
+		{
+			btnDown = TRUE;
+		}
 		break;
 
 	case WM_MOUSEMOVE:
-		if (btnDown == TRUE) {
-			POINT mousePos;
-			GetCursorPos(&mousePos);
-
-			xCenter = mousePos.x;
-			yCenter = mousePos.y;
+		if (btnDown) {
+			xCenter = GET_X_LPARAM(lParam);
+			yCenter = GET_Y_LPARAM(lParam);
 
 			InvalidateRect(hWnd, NULL, TRUE);
 		}
@@ -192,7 +199,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		InvalidateRect(hWnd, NULL, TRUE);
 		break;
 
-	case WM_TIMER:
+	/*case WM_TIMER:
 		if (wParam == TIMER_ID) {
 			if (xCenter + RECT_WIDTH > WIDTH || xCenter - RECT_WIDTH < 0)
 				xDelta = -xDelta;
@@ -205,7 +212,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			InvalidateRect(hWnd, NULL, TRUE);
 		}
-		break;
+		break;*/
 
 	case WM_PAINT:
 		// Here your application is laid out.
