@@ -1,12 +1,14 @@
 ﻿#include <windows.h>
 #include <windowsx.h>
+#include <gdiplus.h>
 #include <stdlib.h>
 #include <string.h>
 #include <tchar.h>
+#pragma comment(lib, "gdi32.lib")
 
 #define WIDTH 800
 #define HEIGHT 600
-#define RECT_WIDTH 25
+#define RECT_WIDTH 50
 #define TIMER_ID 1001
 
 // Global variables
@@ -17,17 +19,64 @@ static TCHAR szWindowClass[] = _T("DesktopApp");
 // The string that appears in the application's title bar.
 static TCHAR szTitle[] = _T("Windows Desktop App");
 
+static TCHAR szImageName[] = _T("LogoImage");
+
 HINSTANCE hInst;
 
 // Forward declarations of functions included in this code module:
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
-int xCenter = 50;
-int yCenter = 50;
-int xDelta = 4;
-int yDelta = 4;
+int x = 0;
+int y = 0;
+int xDelta = 5;
+int yDelta = 5;
 
 bool btnDown = FALSE;
+
+void OnPaint(HWND hWnd, WPARAM wParam) {
+	PAINTSTRUCT ps;
+	RECT r;
+	if (!GetClientRect(hWnd, &r)) 
+		GetLastError();
+
+	HDC hdc = BeginPaint(hWnd, &ps);
+	HDC  memDC = CreateCompatibleDC(hdc);
+	HBITMAP hBM = CreateCompatibleBitmap(hdc, r.right, r.bottom);
+	HBITMAP mOldBmp = (HBITMAP)SelectObject(memDC, hBM);
+
+	Gdiplus::Graphics graphics(memDC);
+	Gdiplus::Image image(L"D:\\Semester 5\\OSaSP\\LabProject1\\logo.png");
+	Gdiplus::Rect destRect(x, y, RECT_WIDTH, RECT_WIDTH);
+	graphics.DrawImage(&image, destRect);
+
+	BitBlt(hdc, 0, 0, r.right, r.bottom, memDC, 0, 0, SRCCOPY);
+	SelectObject(memDC, mOldBmp);
+	DeleteObject(hBM);
+	DeleteDC(memDC);
+
+	EndPaint(hWnd, &ps);
+}
+
+void MoveImage(HWND hWnd, int xStep, int yStep) {
+	RECT r;
+	GetClientRect(hWnd, &r);
+
+	if (x + xStep > 0 && x + xStep + RECT_WIDTH < r.right)
+		x += xStep;
+
+	if (y + yStep > 0 && y + yStep + RECT_WIDTH < r.bottom)
+		y += yStep;
+
+	InvalidateRect(hWnd, NULL, TRUE);
+}
+
+void StopTimer(HWND hWnd) {
+	KillTimer(hWnd, TIMER_ID);
+}
+
+void StartTimer(HWND hWnd) {
+	SetTimer(hWnd, TIMER_ID, 10, NULL);
+}
 
 int CALLBACK WinMain(
 	_In_ HINSTANCE hInstance,
@@ -46,10 +95,14 @@ int CALLBACK WinMain(
 	wcex.hInstance = hInstance;
 	wcex.hIcon = LoadIcon(hInstance, IDI_APPLICATION);
 	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground = CreateSolidBrush(0x000000);
+	wcex.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
 	wcex.lpszMenuName = NULL;
 	wcex.lpszClassName = szWindowClass;
 	wcex.hIconSm = LoadIcon(wcex.hInstance, IDI_APPLICATION);
+
+	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+	ULONG_PTR           gdiplusToken;
+	Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
 	if (!RegisterClassEx(&wcex))
 	{
@@ -111,6 +164,7 @@ int CALLBACK WinMain(
 		DispatchMessage(&msg);
 	}
 
+	Gdiplus::GdiplusShutdown(gdiplusToken);
 	return (int)msg.wParam;
 }
 
@@ -131,46 +185,54 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	switch (message)
 	{
 	case WM_CREATE:
-		SetTimer(hWnd, TIMER_ID, 5, NULL);
+		StartTimer(hWnd);
 		break;
 
-	case WM_KEYDOWN:
+	case WM_KEYDOWN:	
 		switch (wParam) {
 		case VK_LEFT:
-			xCenter -= 5;
+			StopTimer(hWnd);
+			MoveImage(hWnd, -5, 0);
 			break;
 
 		case VK_RIGHT:
-			xCenter += 5;
+			StopTimer(hWnd);
+			MoveImage(hWnd, 5, 0);
 			break;
 
 		case VK_UP:
-			yCenter -= 5;
+			StopTimer(hWnd);
+			MoveImage(hWnd, 0, -5);
 			break;
 
 		case VK_DOWN:
-			yCenter += 5;
+			StopTimer(hWnd);
+			MoveImage(hWnd, 0, 5);
+			break;
+		
+		case VK_SPACE:
+			StartTimer(hWnd);
 			break;
 		}
 
-		InvalidateRect(hWnd, NULL, TRUE);
 		break;
 
 	case WM_LBUTTONDOWN:
 		mouseX = GET_X_LPARAM(lParam);
 		mouseY = GET_Y_LPARAM(lParam);
 		
-		if (mouseX >= xCenter - RECT_WIDTH && mouseX <= xCenter + RECT_WIDTH &&
-			mouseY >= yCenter - RECT_WIDTH && mouseY <= yCenter + RECT_WIDTH)
+		if (mouseX >= x - RECT_WIDTH && mouseX <= x + RECT_WIDTH &&
+			mouseY >= y - RECT_WIDTH && mouseY <= y + RECT_WIDTH)
 		{
 			btnDown = TRUE;
+			StopTimer(hWnd);
 		}
 		break;
 
 	case WM_MOUSEMOVE:
 		if (btnDown) {
-			xCenter = GET_X_LPARAM(lParam);
-			yCenter = GET_Y_LPARAM(lParam);
+			x = GET_X_LPARAM(lParam);
+			y = GET_Y_LPARAM(lParam);
 
 			InvalidateRect(hWnd, NULL, TRUE);
 		}
@@ -178,61 +240,52 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_LBUTTONUP:
 		btnDown = FALSE;
+		StartTimer(hWnd);
 		break;
 
 	case WM_MOUSEWHEEL:
+		StopTimer(hWnd);
 		delta = GET_WHEEL_DELTA_WPARAM(wParam);
 		fwkey = GET_KEYSTATE_WPARAM(wParam);
 
-		if (delta > 0)
+		if (delta > 0)	
 			if (fwkey == MK_SHIFT)
-				xCenter -= 5;
+				MoveImage(hWnd, 5, 0);
 			else
-				yCenter -= 5;
+				MoveImage(hWnd, 0, -5);
 
 		else if (delta < 0)
 			if (fwkey == MK_SHIFT)
-				xCenter += 5;
+				MoveImage(hWnd, -5, 0);
 			else
-				yCenter += 5;
+				MoveImage(hWnd, 0, 5);
 
-		InvalidateRect(hWnd, NULL, TRUE);
 		break;
 
-	/*case WM_TIMER:
-		if (wParam == TIMER_ID) {
-			if (xCenter + RECT_WIDTH > WIDTH || xCenter - RECT_WIDTH < 0)
+	case WM_TIMER:
+		RECT r;
+		GetClientRect(hWnd, &r);
+
+		if (wParam == TIMER_ID && btnDown == FALSE) {
+			if (x + RECT_WIDTH > r.right || x < 0)
 				xDelta = -xDelta;
 
-			if (yCenter + RECT_WIDTH > HEIGHT || yCenter - RECT_WIDTH < 0)
+			if (y + RECT_WIDTH > r.bottom || y < 0)
 				yDelta = -yDelta;
 
-			xCenter += xDelta;
-			yCenter += yDelta;
+			x += xDelta;
+			y += yDelta;
 
 			InvalidateRect(hWnd, NULL, TRUE);
 		}
-		break;*/
+		break;
 
 	case WM_PAINT:
 		// Here your application is laid out.
 		// For this introduction, we just print out "Hello, Windows desktop!"
 		// in the top left corner.
-		hdc = BeginPaint(hWnd, &ps); 
-
-		r.left = xCenter - RECT_WIDTH;
-		r.top = yCenter - RECT_WIDTH;
-		r.right = xCenter + RECT_WIDTH;
-		r.bottom = yCenter + RECT_WIDTH;
-
-		FillRect(hdc, &r, (HBRUSH)CreateSolidBrush(RGB(255, 0, 0)));
-
-		EndPaint(hWnd, &ps);
-		
-		
+		OnPaint(hWnd, wParam);
 		// End application-specific layout section.
-
-		
 		break;
 
 	case WM_DESTROY:
